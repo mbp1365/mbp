@@ -1,0 +1,183 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!DOCTYPE mapper 
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+
+<mapper namespace="com.mediaflow.tips.warehousing.mapper.ProductMapper">
+
+	<sql id="limitPage">
+		LIMIT #{startIndex}, #{pageListSize}
+	</sql>
+
+	<!-- 
+		모든 컬럼 
+	-->
+	<sql id="allColumn">		
+		 p.prod_id
+		, b.cust_id
+		, b.cust_nm
+		, p.brand_id
+		, d.brand_nm
+		, p.rfid_tag
+		, p.major_ctgy_cd
+		, ctm.cate_name major_ctgy_nm
+		, p.sub_ctgy_cd
+		, cts.cate_name sub_ctgy_nm
+		, p.prod_no
+		, p.prod_nm
+		, p.cut_cnt
+		, p.job_type_cd
+		, cdj.code_name job_type_nm
+		, p.in_chrg_id
+		, p.in_date
+		, p.prod_state_cd
+		, p.bad_cause
+		, p.steam_yn
+		, p.size_desc
+		, p.job_state_cd
+		, CASE WHEN p.upt_id is not null THEN p.upt_id ELSE p.reg_id END reg_id
+		, CASE WHEN p.upt_id is not null THEN date_format(p.upt_dt, '%Y-%m-%d %T') ELSE date_format(p.reg_dt, '%Y-%m-%d %T') END reg_dt
+		, p.upt_id
+		, date_format(p.upt_dt, '%Y-%m-%d %T') upt_dt
+	</sql>
+	
+	<sql id="whereCondition">
+		<if test="@org.apache.commons.lang3.StringUtils@isNotEmpty(rfidId)">
+		AND c.rfid_id = #{rfidId}
+		</if>
+	</sql>
+	
+	<select id="count" resultType="int" parameterType="Product">
+		SELECT COUNT(*)
+		FROM tb_product p
+		INNER JOIN tb_brand d ON d.brand_id = p.brand_id
+		INNER JOIN tb_customer b ON b.cust_id = d.cust_id
+		INNER JOIN tb_category ctm ON ctm.cate_id = p.major_ctgy_cd and ctm.cate_parent_id = '0'
+		INNER JOIN tb_category cts ON cts.cate_id = p.sub_ctgy_cd and ctm.cate_id = p.major_ctgy_cd 
+		INNER JOIN tb_code cdj ON cdj.code_id = p.job_type_cd and cdj.code_group_id = 'JOB_TYPE_CD'
+		WHERE 1=1
+		<if test="@org.apache.commons.lang3.StringUtils@isNotEmpty(rfidTag)">
+		AND p.rfid_tag LIKE CONCAT('%', #{rfidTag},'%')
+		</if>
+		<if test="@org.apache.commons.lang3.StringUtils@isNotEmpty(prodNm)">
+		AND p.prod_nm LIKE CONCAT('%', #{prodNm},'%')
+		</if>
+	</select>
+	
+	<select id="list" resultType="Product" parameterType="Product">
+		SELECT
+			<include refid="allColumn"/>
+		FROM tb_product p
+		INNER JOIN tb_brand d ON d.brand_id = p.brand_id
+		INNER JOIN tb_customer b ON b.cust_id = d.cust_id
+		INNER JOIN tb_category ctm ON ctm.cate_id = p.major_ctgy_cd and ctm.cate_parent_id = '0'
+		INNER JOIN tb_category cts ON cts.cate_id = p.sub_ctgy_cd and ctm.cate_id = p.major_ctgy_cd 
+		INNER JOIN tb_code cdj ON cdj.code_id = p.job_type_cd and cdj.code_group_id = 'JOB_TYPE_CD'
+		WHERE 1=1
+		
+		<if test="@org.apache.commons.lang3.StringUtils@isNotEmpty(rfidTag)">
+		AND p.rfid_tag LIKE CONCAT('%', #{rfidTag},'%')
+		</if>
+		<if test="@org.apache.commons.lang3.StringUtils@isNotEmpty(prodNm)">
+		AND p.prod_nm LIKE CONCAT('%', #{prodNm},'%')
+		</if>
+		
+		ORDER BY p.reg_dt DESC
+		
+		
+		<if test="pageListSize gt 0">
+			<include refid="limitPage"/>
+		</if>
+	</select>
+	
+	
+	<select id="get" resultType="Product" parameterType="Product">
+		SELECT
+			<include refid="allColumn"/>
+		FROM tb_product p
+		INNER JOIN tb_brand d ON d.brand_id = p.brand_id
+		INNER JOIN tb_customer b ON b.cust_id = d.cust_id
+		INNER JOIN tb_category ctm ON ctm.cate_id = p.major_ctgy_cd and ctm.cate_parent_id = '0'
+		INNER JOIN tb_category cts ON cts.cate_id = p.sub_ctgy_cd and ctm.cate_id = p.major_ctgy_cd 
+		INNER JOIN tb_code cdj ON cdj.code_id = p.job_type_cd and cdj.code_group_id = 'JOB_TYPE_CD'
+		WHERE 1=1
+			AND p.prod_id = #{prodId}
+	</select>
+	
+	
+	
+	<!-- 
+		제품정보 추가
+	-->	
+	<insert id="add" parameterType="Product">
+		INSERT INTO tb_product
+		(
+			prod_id
+		  ,brand_id
+		  ,rfid_tag
+		  ,major_ctgy_cd
+		  ,sub_ctgy_cd
+		  ,prod_no
+		  ,prod_nm
+		  ,cut_cnt
+		  ,job_type_cd
+		  ,reg_id
+		  ,reg_dt
+		)
+		VALUES
+		(
+			getNewProductId()
+		  , #{brandId}
+		  ,#{rfidTag}
+		  ,#{majorCtgyCd}
+		  ,#{subCtgyCd}
+		  ,#{prodNo}
+		  ,#{prodNm}
+		  ,#{cutCnt}
+		  ,#{jobTypeCd}
+		  ,#{regId}
+		  ,NOW()
+		)
+	</insert>
+	
+	<!-- 
+		수정 
+	-->
+	<update id="mod" parameterType="Product">
+		UPDATE
+			tb_product
+		SET
+			<trim prefixOverrides=",">				
+				<if test="@org.apache.commons.lang3.StringUtils@isNotEmpty(brandId)">
+				, brand_id = #{brandId}
+				</if>			
+				<if test="@org.apache.commons.lang3.StringUtils@isNotEmpty(rfidTag)">
+				, rfid_tag = #{rfidTag}
+				</if>			
+				<if test="@org.apache.commons.lang3.StringUtils@isNotEmpty(majorCtgyCd)">
+				, major_ctgy_cd = #{majorCtgyCd}
+				</if>			
+				<if test="@org.apache.commons.lang3.StringUtils@isNotEmpty(subCtgyCd)">
+				, sub_ctgy_cd = #{subCtgyCd}
+				</if>			
+				<if test="@org.apache.commons.lang3.StringUtils@isNotEmpty(prodNo)">
+				, prod_no = #{prodNo}
+				</if>			
+				<if test="@org.apache.commons.lang3.StringUtils@isNotEmpty(prodNm)">
+				, prod_nm = #{prodNm}
+				</if>
+				, cut_cnt = #{cutCnt}
+				<if test="@org.apache.commons.lang3.StringUtils@isNotEmpty(jobTypeCd)">
+				, job_type_cd = #{jobTypeCd}
+				</if>
+				<if test="@org.apache.commons.lang3.StringUtils@isNotEmpty(uptId)">
+				, upt_id = #{uptId}
+				, upt_dt = NOW()
+				</if>
+			</trim>
+		WHERE
+			prod_id = #{prodId}
+	</update>
+	
+</mapper>

@@ -1,0 +1,93 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!DOCTYPE mapper 
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+
+<mapper namespace="com.mediaflow.tips.customer.mapper.ContractFileMapper">
+
+	<!-- 
+		모든 컬럼 
+		cortfile_id, cort_id, session_id, category, child_folder_path, file_name, id, ext, reg_dt 
+	-->
+	<sql id="allColumn">		
+		 cortfile_id		
+		 , cort_id	
+		 , session_id	
+		 , category	
+		 , child_folder_path	
+		 , file_name	
+		 , id
+		 , ext
+		 , date_format(reg_dt, '%Y-%m-%d %T') reg_dt
+	</sql>
+	
+	
+	<select id="list" resultType="ContractFile" parameterType="ContractFile">
+		SELECT
+			<include refid="allColumn"/>
+		FROM tb_contract_files
+		WHERE cort_id = #{cortId}	
+		
+		
+	</select>
+	
+	<select id="get" resultType="ContractFile" parameterType="ContractFile">
+		SELECT
+			<include refid="allColumn"/>
+		FROM tb_contract_files
+		WHERE cortfile_id = #{cortFileId}
+		AND cort_id = #{cortId}		
+	</select>
+	
+	
+	<!-- 
+		사용자 추가
+	-->	
+	<insert id="add" parameterType="ContractFile">
+		INSERT INTO tb_contract_files
+		(		
+			 cort_id	
+			 , session_id	
+			 , category	
+			 , child_folder_path	
+			 , file_name	
+			 , id
+			 , ext
+			, reg_dt 		
+		)
+		VALUES
+		(
+			 #{cortId}
+			, #{sessionId}
+			, #{category}
+			, #{childFolderPath}
+			, #{fileName}
+			, #{id}
+			, #{ext}
+			, NOW() <!-- regDt -->
+		)
+	</insert>
+	
+	<!-- 
+		수정 
+	-->
+	<update id="del" parameterType="ContractFile">
+		DELETE FROM 
+			tb_contract_files
+		WHERE			
+			<if test="@org.apache.commons.lang3.StringUtils@isNotEmpty(cortId)">
+			cort_id = #{cortId}
+			</if>
+	</update>
+	
+	<update id="delfile" parameterType="ContractFile">
+		DELETE FROM 
+			tb_contract_files
+		WHERE			
+			<if test="@org.apache.commons.lang3.StringUtils@isNotEmpty(id)">
+			id = #{id}
+			</if>
+	</update>
+	
+</mapper>

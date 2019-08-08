@@ -1,0 +1,106 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.mediaflow.tips.operate.mapper.CategoryMapper">
+
+	<select id="list" resultType="Category" parameterType="Category">
+		SELECT  
+		  cate_id
+			, cate_parent_id
+			, cate_parent_name
+			, cate_name
+			, remark
+			, use_yn 
+		FROM
+		(
+			SELECT
+				'0' cate_id
+				, '' cate_parent_id
+				, '' cate_parent_name
+				, '카테고리' cate_name
+				, '' remark
+				, 'Y' use_yn
+			FROM DUAL
+			
+			union all
+			
+			SELECT
+				ct.cate_id
+				, ct.cate_parent_id 
+				, cp.cate_name cate_parent_name
+				, ct.cate_name
+				, ct.remark
+				, ct.use_yn
+			FROM tb_category ct
+			LEFT OUTER JOIN tb_category cp ON cp.cate_id = ct.cate_parent_id
+			WHERE ct.use_yn = 'Y'
+		) cate
+		ORDER BY cate_parent_id, cate_id
+	</select>
+	
+	<select id="get" resultType="Category" parameterType="Category">
+		SELECT
+			c.cate_id
+			, c.cate_parent_id 
+			, cp.cate_name cate_parent_name
+			, c.cate_name
+			, c.remark
+			, c.use_yn
+		FROM tb_category c
+		INNER JOIN tb_category cp ON cp.cate_id = c.cate_parent_id
+		WHERE 1=1
+		AND c.cate_id = #{cateId}
+		ORDER BY c.cate_parent_id, c.cate_id
+	</select>
+	
+	<insert id="add" parameterType="Category">
+		INSERT INTO tb_category
+		(
+			cate_id
+			, cate_parent_id
+			, cate_name
+			, remark
+		)
+		VALUES
+		(
+			#{cateId}
+			, #{cateParentId}
+			, #{cateName}
+			, #{remark}
+		)
+	</insert>
+	
+	<update id="mod" parameterType="Category">
+		UPDATE tb_category
+		SET
+			cate_name =  #{cateName}
+			,remark = #{remark}
+			
+		WHERE
+			cate_id = #{cateId}
+		AND
+			cate_parent_id = #{cateParentId}
+	</update>
+
+	<update id="del" parameterType="Category">
+		UPDATE tb_category
+		SET
+			use_yn =  #{useYn}
+			
+		WHERE
+			cate_id = #{cateId}
+		AND
+			cate_parent_id = #{cateParentId}
+	</update>
+	
+	<select id="catelist" resultType="Category" parameterType="Category">
+		SELECT  
+		  	  cate_id
+			, cate_parent_id
+			, cate_name
+		FROM tb_category
+		WHERE
+			use_yn = 'Y'
+		 AND cate_parent_id = #{cateParentId}
+	</select>
+</mapper>

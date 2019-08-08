@@ -1,0 +1,110 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!DOCTYPE mapper 
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+
+<mapper namespace="com.mediaflow.tips.warehousing.mapper.ProductTempMapper">
+	<!-- 
+		모든 컬럼 
+	-->
+	<sql id="allColumn">		
+		 p.prod_tmp_id
+		, p.up_file_id
+		, p.rfid_tag
+		, p.major_ctgy_cd
+		, ctm.cate_name major_ctgy_nm
+		, p.sub_ctgy_cd
+		, cts.cate_name sub_ctgy_nm
+		, p.prod_no
+		, p.prod_nm
+		, p.cut_cnt
+		, p.job_type_cd
+		, cdj.code_name job_type_nm
+		, p.reg_id
+		, date_format(p.reg_dt, '%Y-%m-%d %T') reg_dt
+	</sql>
+	
+	<select id="count" resultType="int" parameterType="ProductTemp">
+		SELECT COUNT(*)
+		FROM tb_product_tmp p
+		INNER JOIN tb_category ctm ON ctm.cate_id = p.major_ctgy_cd and ctm.cate_parent_id = '0'
+		INNER JOIN tb_category cts ON cts.cate_id = p.sub_ctgy_cd and ctm.cate_parent_id = p.major_ctgy_cd
+		INNER JOIN tb_code cdj ON cdj.code_id = p.job_type_cd
+		WHERE 1=1
+		<if test="@org.apache.commons.lang3.StringUtils@isNotEmpty(upFileId)">
+		AND p.up_file_id = #{upFileId}
+		</if>
+	</select>
+	
+	<select id="list" resultType="ProductTemp" parameterType="ProductTemp">
+		SELECT
+			<include refid="allColumn"/>
+		FROM tb_product_tmp p
+		INNER JOIN tb_category ctm ON ctm.cate_id = p.major_ctgy_cd and ctm.cate_parent_id = '0'
+		INNER JOIN tb_category cts ON cts.cate_id = p.sub_ctgy_cd and ctm.cate_id = p.major_ctgy_cd 
+		INNER JOIN tb_code cdj ON cdj.code_id = p.job_type_cd and cdj.code_group_id = 'JOB_TYPE_CD'
+		WHERE 1=1
+		
+		<if test="@org.apache.commons.lang3.StringUtils@isNotEmpty(upFileId)">
+		AND p.up_file_id = #{upFileId}
+		</if>
+		ORDER BY p.reg_dt DESC
+	</select>
+	
+	
+	<select id="get" resultType="ProductTemp" parameterType="ProductTemp">
+		SELECT
+			<include refid="allColumn"/>
+		FROM tb_product_tmp p
+		INNER JOIN tb_category ctm ON ctm.cate_id = p.major_ctgy_cd and ctm.cate_parent_id = '0'
+		INNER JOIN tb_category cts ON cts.cate_id = p.sub_ctgy_cd and ctm.cate_id = p.major_ctgy_cd 
+		INNER JOIN tb_code cdj ON cdj.code_id = p.job_type_cd and cdj.code_group_id = 'JOB_TYPE_CD'
+		WHERE 1=1
+			AND p.prod_tmp_id = #{prodTmpId}
+	</select>
+	
+	
+	<!-- 
+		제품정보 추가
+	-->	
+	<insert id="add" parameterType="ProductTemp">
+		INSERT INTO tb_product_tmp
+		(
+		  up_file_id
+		  ,rfid_tag
+		  ,major_ctgy_cd
+		  ,sub_ctgy_cd
+		  ,prod_no
+		  ,prod_nm
+		  ,cut_cnt
+		  ,job_type_cd
+		  ,reg_id
+		  ,reg_dt
+		)
+		VALUES
+		(
+		  #{upFileId}
+		  ,#{rfidTag}
+		  ,#{majorCtgyCd}
+		  ,#{subCtgyCd}
+		  ,#{prodNo}
+		  ,#{prodNm}
+		  ,#{cutCnt}
+		  ,#{jobTypeCd}
+		  ,#{regId}
+		  ,NOW()
+		)
+	</insert>
+	
+	<!-- 
+		수정 
+	-->
+	<delete id="del" parameterType="ProductTemp">
+		delete from
+			tb_product_tmp
+		WHERE
+			up_file_id = #{upFileId}
+	</delete>
+	
+</mapper>

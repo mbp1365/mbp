@@ -1,0 +1,193 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!DOCTYPE mapper 
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+
+<mapper namespace="com.mediaflow.tips.customer.mapper.ContractMapper">
+
+	<sql id="limitPage">
+		LIMIT #{startIndex}, #{pageListSize}
+	</sql>
+
+	<!-- 
+		모든 컬럼 
+		cort_id, brand_id, cort_nm, ori_file_nm, chg_file_nm, retn_date, reg_id, reg_dt, upt_id, upt_dt, del_id, del_dt 
+	-->
+	<sql id="allColumn">		
+		 c.cort_id		
+		 , c.cort_nm	
+		 , c.cort_req	
+		 , c.cust_id	
+		 , b.cust_nm	
+		 , c.brand_id	
+		 , d.brand_nm
+		 , date_format(c.retn_date, '%Y-%m-%d') retn_date
+		 , CASE WHEN c.upt_id is not null THEN c.upt_id ELSE c.reg_id END reg_id
+		 , CASE WHEN c.upt_id is not null THEN date_format(c.upt_dt, '%Y-%m-%d %T') ELSE date_format(c.reg_dt, '%Y-%m-%d %T') END reg_dt
+		 , c.upt_id
+		 , date_format(c.upt_dt, '%Y-%m-%d %T') upt_dt
+		 , c.del_id
+		 , date_format(c.del_dt, '%Y-%m-%d %T') del_dt
+		 , concat('계약서파일 ', (SELECT COUNT(*) AS CNT FROM tb_contract_files WHERE cort_id = c.cort_id), '개') cortFileCnt
+	</sql>
+	
+	<sql id="whereCondition">
+		<if test="@org.apache.commons.lang3.StringUtils@isNotEmpty(cortId)">
+		AND c.cort_id = #{cortId}
+		</if>
+		<if test="@org.apache.commons.lang3.StringUtils@isNotEmpty(cortNm)">
+		AND c.cort_nm LIKE CONCAT('%', #{cortNm},'%')
+		</if>
+		<if test="@org.apache.commons.lang3.StringUtils@isNotEmpty(brandNm)">
+		AND d.brand_nm LIKE CONCAT('%', #{brandNm},'%')
+		</if>
+		<if test="@org.apache.commons.lang3.StringUtils@isNotEmpty(custNm)">
+		AND b.cust_nm LIKE CONCAT('%', #{custNm},'%')
+		</if>
+	</sql>
+	
+	<select id="count" resultType="int" parameterType="Contract">
+		SELECT COUNT(*)
+		FROM tb_contract c
+		INNER JOIN tb_customer b ON b.cust_id = c.cust_id
+		INNER JOIN tb_brand d ON d.brand_id = c.brand_id
+		WHERE IFNULL(c.del_id, '') = ''
+			<include refid="whereCondition"/>
+	</select>
+	
+	<select id="list" resultType="Contract" parameterType="Contract">
+		SELECT
+			<include refid="allColumn"/>
+		FROM tb_contract c
+		INNER JOIN tb_customer b ON b.cust_id = c.cust_id
+		INNER JOIN tb_brand d ON d.brand_id = c.brand_id
+		WHERE IFNULL(c.del_id, '') = ''
+		
+			<include refid="whereCondition"/>
+		
+		ORDER BY c.reg_dt DESC
+		
+		
+		<if test="pageListSize gt 0">
+			<include refid="limitPage"/>
+		</if>
+	</select>
+	
+	<select id="get" resultType="Contract" parameterType="Contract">
+		SELECT
+			<include refid="allColumn"/>
+		FROM tb_contract c
+		INNER JOIN tb_customer b ON b.cust_id = c.cust_id
+		INNER JOIN tb_brand d ON d.brand_id = c.brand_id
+		WHERE IFNULL(c.del_id, '') = ''
+		<trim prefixOverrides="AND">
+			<include refid="whereCondition"/>
+		</trim>
+	</select>
+	
+	
+	<!-- 
+		사용자 추가
+	-->	
+	<insert id="add" parameterType="Contract">
+		<selectKey keyProperty="cortId" resultType="java.lang.String" order="AFTER">
+	    	select cort_id FROM tb_contract WHERE cust_id = #{custId} AND brand_id = #{brandId} AND  cort_nm = #{cortNm}  
+	  	</selectKey>
+		INSERT INTO tb_contract
+		(
+			cort_id
+			  ,cust_id
+			  ,brand_id
+			  ,cort_nm			  
+			<if test="@org.apache.commons.lang3.StringUtils@isNotEmpty(oriFileNm)">
+			  ,ori_file_nm
+			</if>
+			<if test="@org.apache.commons.lang3.StringUtils@isNotEmpty(chgFileNm)">
+			  ,chg_file_nm
+			</if>
+			<if test="@org.apache.commons.lang3.StringUtils@isNotEmpty(retnDate)">
+			  ,retn_date
+			</if>
+			<if test="@org.apache.commons.lang3.StringUtils@isNotEmpty(cortReq)">
+			  ,cort_req
+			</if>
+			  ,reg_id
+			  ,reg_dt		
+		)
+		VALUES
+		(
+			getNewContractId()
+			, #{custId}
+			, #{brandId}
+			, #{cortNm}
+			<if test="@org.apache.commons.lang3.StringUtils@isNotEmpty(oriFileNm)">
+			, #{oriFileNm}
+			</if>
+			<if test="@org.apache.commons.lang3.StringUtils@isNotEmpty(chgFileNm)">
+			, #{chgFileNm}
+			</if>
+			<if test="@org.apache.commons.lang3.StringUtils@isNotEmpty(retnDate)">
+			, #{retnDate}
+			</if>
+			<if test="@org.apache.commons.lang3.StringUtils@isNotEmpty(cortReq)">
+			, #{cortReq}
+			</if>
+			, #{regId}
+			, NOW() <!-- regDt -->
+		)
+	</insert>
+	
+	<!-- 
+		수정 
+			  ,cust_id
+			  ,brand_id
+			  ,cort_nm
+			  ,ori_file_nm
+			  ,chg_file_nm
+			  ,retn_date
+	-->
+	<update id="mod" parameterType="Contract">
+		UPDATE
+			tb_contract
+		SET
+			cust_id = #{custId}
+			, brand_id = #{brandId},
+			<trim prefixOverrides=",">					
+				<if test="@org.apache.commons.lang3.StringUtils@isNotEmpty(cortNm)">
+				, cort_nm = #{cortNm}
+				</if>
+				, retn_date = #{retnDate}
+				<if test="@org.apache.commons.lang3.StringUtils@isNotEmpty(cortReq)">
+				, cort_req = #{cortReq}
+				</if>
+				<if test="@org.apache.commons.lang3.StringUtils@isNotEmpty(uptId)">
+				, upt_id = #{uptId}
+				, upt_dt = NOW()
+				</if>
+				<if test="@org.apache.commons.lang3.StringUtils@isNotEmpty(delId)">
+				, del_id = #{delId}
+				, del_dt = NOW()
+				</if>
+			</trim>
+		WHERE
+			cort_id = #{cortId}
+	</update>
+	<!-- 
+		수정 
+	-->
+	<update id="del" parameterType="Contract">
+		UPDATE
+			tb_contract
+		SET
+			<trim prefixOverrides=",">	
+				<if test="@org.apache.commons.lang3.StringUtils@isNotEmpty(delId)">
+				, del_id = #{delId}
+				, del_dt = NOW()
+				</if>
+			</trim>
+		WHERE
+			cort_id = #{cortId}
+	</update>
+	
+</mapper>

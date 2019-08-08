@@ -1,0 +1,146 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.mediaflow.tips.operate.mapper.CodeManagerMapper">
+
+	<select id="codeGroupList" resultType="CodeGroup" parameterType="CodeGroup">
+		SELECT
+			code_group_id
+			, code_group_name			
+		FROM tb_code_group 
+		WHERE 
+		  1=1
+		  AND use_yn = 'Y'
+		<if test="@org.apache.commons.lang3.StringUtils@isNotEmpty(codeGroupName)">
+		  AND code_group_name like CONCAT('%', #{codeGroupName},'%') 
+		</if>
+		ORDER BY code_group_id
+	</select>
+	
+	<select id="codeList" resultType="Code" parameterType="Code">
+		SELECT
+			cg.code_group_id
+			, cg.code_group_name
+			, c.code_id
+			, c.code_name
+			, c.code_order
+			, c.remark
+			, c.use_yn
+		FROM tb_code_group cg
+		INNER JOIN tb_code c ON cg.code_group_id = c.code_group_id
+		WHERE 		 	
+		  1=1
+		  AND c.use_yn = 'Y'
+		<if test="@org.apache.commons.lang3.StringUtils@isNotEmpty(codeGroupId)">
+		  AND cg.code_group_id = #{codeGroupId} 
+		</if>
+		ORDER BY cg.code_group_id, c.code_order
+	</select>
+	
+	<select id="getCodeGroup" resultType="CodeGroup" parameterType="CodeGroup">
+		SELECT
+			code_group_id
+			, code_group_name			
+		FROM tb_code_group 
+		<if test="@org.apache.commons.lang3.StringUtils@isNotEmpty(codeGroupId)">
+		WHERE code_group_id = #{codeGroupId} 
+		</if>
+	</select>
+	
+	<select id="getCode" resultType="Code" parameterType="Code">		
+		SELECT
+			cg.code_group_id
+			, cg.code_group_name
+			, c.code_id
+			, c.code_name
+			, c.code_order
+			, c.remark
+			, c.use_yn
+		FROM tb_code_group cg
+		INNER JOIN tb_code c ON cg.code_group_id = c.code_group_id
+		WHERE 1=1
+		<if test="@org.apache.commons.lang3.StringUtils@isNotEmpty(codeId)">
+		    AND c.code_id = #{codeId}
+		</if>
+		<if test="@org.apache.commons.lang3.StringUtils@isNotEmpty(codeGroupId)">
+		    AND c.code_group_id = #{codeGroupId}
+		</if>
+		ORDER BY cg.code_group_id, c.code_order
+	</select>
+	
+	<insert id="addCodeGroup" parameterType="CodeGroup">
+		INSERT INTO tb_code_group
+		(
+			 code_group_id
+			, code_group_name
+			, use_yn
+		)
+		VALUES
+		(
+			#{codeGroupId}
+			, #{codeGroupName}
+			, 'Y'
+		)
+	</insert>
+	
+	<insert id="addCode" parameterType="Code">
+		INSERT INTO tb_code
+		(
+			code_id
+			, code_group_id
+			, code_name
+			, code_order
+			<if test="@org.apache.commons.lang3.StringUtils@isNotEmpty(remark)">
+			, remark
+			</if>
+			, use_yn
+		)
+		VALUES
+		(
+			#{codeId}
+			, #{codeGroupId}
+			, #{codeName}
+			, #{codeOrder}
+			<if test="@org.apache.commons.lang3.StringUtils@isNotEmpty(remark)">
+			, #{remark}
+			</if>
+			, 'Y'
+		)
+	</insert>
+	
+	<update id="modCodeGroup" parameterType="CodeGroup">
+		UPDATE tb_code_group
+		SET			
+			<if test="@org.apache.commons.lang3.StringUtils@isNotEmpty(codeGroupName)">
+			code_group_name = #{codeGroupName}
+			</if>
+			<if test="@org.apache.commons.lang3.StringUtils@isNotEmpty(useYn)">
+			use_yn = #{useYn}
+			</if>
+			
+		WHERE
+			code_group_id = #{codeGroupId}
+	</update>
+
+	
+	<update id="modCode" parameterType="Code">
+		UPDATE tb_code
+		SET
+			<if test="@org.apache.commons.lang3.StringUtils@isNotEmpty(codeName)">
+			code_name = #{codeName},
+			</if>
+			<if test="@org.apache.commons.lang3.StringUtils@isNotEmpty(codeOrder)">
+			code_order = #{codeOrder},
+			</if>
+			<if test="@org.apache.commons.lang3.StringUtils@isNotEmpty(remark)">
+			remark = #{remark}
+			</if>
+			<if test="@org.apache.commons.lang3.StringUtils@isNotEmpty(useYn)">
+			use_yn = #{useYn}
+			</if>
+		WHERE
+			code_id = #{codeId}
+			AND	code_group_id = #{codeGroupId}
+	</update>
+
+</mapper>
